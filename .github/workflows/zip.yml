@@ -10,39 +10,32 @@ jobs:
     - name: Checkout code from main repo
       uses: actions/checkout@v2
 
-    # Remove old zip file from main repo if it exists (automated cleanup)
-    - name: Remove old resource pack zip from main repo
-      run: |
-        rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
-        echo "Old .zip files removed from main repository"
-
-    # Extract the version number from your resource pack file (or another file where version is stored)
+    # Extract the version number from your resource pack file
     - name: Extract version from resource pack description
       id: version
       run: |
-        # Read the description from the resource pack file (or a specific file where version is stored)
         description=$(cat pack.mcmeta)
-        
-        # Use regex to extract the version number (e.g., 'V 6.0.1')
         version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
-        
-        # Set the extracted version to an environment variable for later steps
         echo "VERSION=$version" >> $GITHUB_ENV
         echo "Extracted version: $version"
 
-    # Create Git tag (this will push a tag to the repository)
-    - name: Create and Push Git Tag
+    # Create a Git tag for the release
+    - name: Create Git Tag
       run: |
-        git tag v${{ env.VERSION }}  # Create a tag with version number (e.g., v6.1.0)
-        git push origin v${{ env.VERSION }}  # Push the tag to GitHub
+        git tag -a "v${{ env.VERSION }}" -m "Release version ${{ env.VERSION }}"
+        git push origin "v${{ env.VERSION }}"  # Push the tag to the repository
 
-    # Create GitHub Release and Upload ZIP File
+    # Archive the resource pack into a .zip file (without pushing to the repo)
+    - name: Archive Resource Pack
+      uses: thedoctor0/zip-release@master
+      with:
+        filename: "SkyMineRP-${{ env.VERSION }}.zip"  # Append version to the filename
+        exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
+
+    # Create GitHub Release and upload the .zip file as an asset
     - name: Create GitHub Release and Upload ZIP File
       uses: softprops/action-gh-release@v1
       with:
-        files: SkyMineRP-${{ env.VERSION }}.zip  # Attach the .zip file to the release
-        name: "Release v${{ env.VERSION }}"  # You can customize the release name here
-        draft: false  # Set to false to make the release publicly available
-        prerelease: false  # Set to true if this is a prerelease, false for regular releases
+        files: resourcepack-${{ env.VERSION }}.zip  # Attach the .zip file to the release
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # This is automatically available for GitHub Actions workflows
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatically available GitHub Actions token
