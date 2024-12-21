@@ -1,28 +1,51 @@
-name: Create Archive
+name: Create and Version Resource Pack
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    
+    # Checkout the code from the repository
     - name: Checkout code
       uses: actions/checkout@v2
-    - name: pull latest and remove old file from repo
+
+    # Pull the latest changes and remove the old zip file if it exists
+    - name: Pull latest and remove old file from repo
       run: |
         git config --global user.name "mr1326"
         git config --global user.email ""
         git config pull.rebase false
         git pull
-        rm -f skymine.zip
-    - name: Archive Release
+        rm -f resourcepack.zip  # Remove old zip if it exists
+
+    # Extract the version number from your resource pack file (or another file where it's stored)
+    - name: Extract version from resource pack description
+      id: version
+      run: |
+        # Read the description from the resource pack file (or a specific file where version is stored)
+        description=$(cat pack.mcmeta)
+        
+        # Use regex to extract the version number
+        version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
+        
+        # Set the extracted version to an environment variable for later steps
+        echo "VERSION=$version" >> $GITHUB_ENV
+        echo "Extracted version: $version"
+
+    # Archive the release, including only the necessary resource pack files
+    - name: Archive Resource Pack Release
       uses: thedoctor0/zip-release@master
       with:
-        filename: 'skymine.zip'
-        exclusions: '*.git* /*node_modules/* .editorconfig'
-    - name: push changes to remote
+        filename: "SkymineRP-${{ env.VERSION }}.zip"  # Append version to the filename
+        exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
+
+    # Push changes to the remote repository with the new version file
+    - name: Push changes to remote
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMinePack.git
         git add -A
-        git commit -m "new pack"
+        git commit -m "nejnovejsi verze RP ${{ env.VERSION }}"
         git push --force
