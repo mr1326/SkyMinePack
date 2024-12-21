@@ -10,14 +10,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Pull the latest changes and remove the old zip file if it exists
-    - name: Pull latest and remove old file from repo
+    # Remove the old zip files if they exist (automated cleanup)
+    - name: Remove old resource pack zip files
       run: |
-        git config --global user.name "mr1326"
-        git config --global user.email ""
-        git config pull.rebase false
-        git pull
-        rm -f resourcepack-*.zip  # Remove old zip if it exists
+        rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
+        echo "Old .zip files removed"
 
     # Extract the version number from your resource pack file (or another file where it's stored)
     - name: Extract version from resource pack description
@@ -26,7 +23,7 @@ jobs:
         # Read the description from the resource pack file (or a specific file where version is stored)
         description=$(cat pack.mcmeta)
         
-        # Use regex to extract the version number
+        # Use regex to extract the version number (e.g., 'V 6.0.1')
         version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
         
         # Set the extracted version to an environment variable for later steps
@@ -37,7 +34,7 @@ jobs:
     - name: Archive Resource Pack Release
       uses: thedoctor0/zip-release@master
       with:
-        filename: "SkymineRP-${{ env.VERSION }}.zip"  # Append version to the filename
+        filename: "resourcepack-${{ env.VERSION }}.zip"  # Append version to the filename
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
 
     # Push changes to the remote repository with the new version file
