@@ -5,16 +5,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    
+
     # Checkout the code from the repository
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Remove the old zip files if they exist (automated cleanup)
-    - name: Remove old resource pack zip files
+    # Pull the latest changes with a shallow clone to avoid fetching large files (e.g., .zip)
+    - name: Pull latest changes
+      run: |
+        git config --global user.name "mr1326"
+        git config --global user.email ""
+        git config pull.rebase false
+        git pull --depth 1  # Shallow pull to avoid fetching the entire history
+
+    # Remove the old zip file from the main repo if it exists (automated cleanup)
+    - name: Remove old resource pack zip from main repo
       run: |
         rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
-        echo "Old .zip files removed"
+        echo "Old .zip files removed from main repository"
 
     # Extract the version number from your resource pack file (or another file where it's stored)
     - name: Extract version from resource pack description
@@ -23,7 +31,7 @@ jobs:
         # Read the description from the resource pack file (or a specific file where version is stored)
         description=$(cat pack.mcmeta)
         
-        # Use regex to extract the version number
+        # Use regex to extract the version number (e.g., 'V 6.0.1')
         version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
         
         # Set the extracted version to an environment variable for later steps
@@ -31,18 +39,32 @@ jobs:
         echo "Extracted version: $version"
 
     # Archive the release, including only the necessary resource pack files
-    - name: Archive Resource Pack Release
+    - name: Archive Resource Pack Release in main repo
       uses: thedoctor0/zip-release@master
       with:
         filename: "resourcepack-${{ env.VERSION }}.zip"  # Append version to the filename
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
 
-    # Push changes to the remote repository with the new version file
-    - name: Push changes to remote
+    # Push the .zip file to the main repository (only the latest version)
+    - name: Push latest version to main repository
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMinePack.git
         git add -A
-        git commit -m "nejnovejsi verze RP ${{ env.VERSION }}"
-        git push --force
+        git commit -m "new resource pack version ${{ env.VERSION }}"
+        git push --force  # Push only the latest version to the main repository
+
+    # Push the .zip file to the Archive repository (all versions)
+    - name: Push .zip file to Archive repository
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git remote add archive https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git
+        git clone https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git  # Clone the Archive repo
+
+        # Add the new zip file to the Archive repo
+        cd SkyMineRP-Archiv
+        git add SkymineRP-${{ env.VERSION }}.zip  # Add new version to the archive
+        git commit -m "Add new resource pack version ${{ env.VERSION }}"
+        git push archive main  # Push to the archive repo
