@@ -20,6 +20,9 @@ jobs:
         exclusions: '*.git* /*node_modules/* .editorconfig'
     - name: push changes to remote
       run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMinePack.git
         git add -A
         git commit -m "new pack"
         git push --force
