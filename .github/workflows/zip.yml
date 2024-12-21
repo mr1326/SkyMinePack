@@ -17,7 +17,7 @@ jobs:
         git config --global user.email ""
         git config pull.rebase false
         git pull
-        rm -f resourcepack.zip  # Remove old zip if it exists
+        rm -f resourcepack-*.zip  # Remove old zip if it exists
 
     # Extract the version number from your resource pack file (or another file where it's stored)
     - name: Extract version from resource pack description
