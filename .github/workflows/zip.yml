@@ -10,15 +10,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Pull the latest changes (shallow fetch without the zip files)
-    - name: Pull latest changes with shallow clone to avoid fetching large files
-      run: |
-        git config --global user.name "mr1326"
-        git config --global user.email ""
-        git config pull.rebase false
-        git pull --depth 1  # Shallow pull to avoid fetching the entire history
-
-    # Remove any old .zip files from the main repo (automated cleanup)
+    # Remove old zip file from main repo if it exists (automated cleanup)
     - name: Remove old resource pack zip from main repo
       run: |
         rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
@@ -45,24 +37,14 @@ jobs:
         filename: "resourcepack-${{ env.VERSION }}.zip"  # Append version to the filename
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
 
-    # Push the new version of the resource pack to the main repository (latest version only)
-    - name: Push latest version to main repository
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMinePack.git
-        git add -A
-        git commit -m "new resource pack version ${{ env.VERSION }}"
-        git push --force  # Push only the latest version to the main repository
-
     # Push the .zip file to the Archive repository (all versions)
     - name: Push .zip file to Archive repository (without pulling the main repo's zip)
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Clone only the archive repository to avoid pulling the main repo's .zip files
-        git clone https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git SkyMineRP-Archiv
+        # Clone the Archive repo, NOT the main repo
+        git clone --depth 1 https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git SkyMineRP-Archiv
 
         # Navigate to the archive repository
         cd SkyMineRP-Archiv
@@ -72,3 +54,13 @@ jobs:
         git add SkymineRP-${{ env.VERSION }}.zip  # Add the new version zip file
         git commit -m "Add new resource pack version ${{ env.VERSION }} to archive"
         git push origin main  # Push the updated archive with all versions
+
+    # Push the latest version of the resource pack to the main repository
+    - name: Push latest version to main repository
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMinePack.git
+        git add -A
+        git commit -m "new resource pack version ${{ env.VERSION }}"
+        git push --force  # Push only the latest version to the main repository
