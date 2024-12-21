@@ -30,7 +30,7 @@ jobs:
         echo "VERSION=$version" >> $GITHUB_ENV
         echo "Extracted version: $version"
 
-    # Create Git tag (IMPORTANT! This is the missing part that was causing the error)
+    # Create Git tag (this will push a tag to the repository)
     - name: Create and Push Git Tag
       run: |
         git tag v${{ env.VERSION }}  # Create a tag with version number (e.g., v6.1.0)
@@ -41,5 +41,8 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: SkyMineRP-${{ env.VERSION }}.zip  # Attach the .zip file to the release
+        name: "Release v${{ env.VERSION }}"  # You can customize the release name here
+        draft: false  # Set to false to make the release publicly available
+        prerelease: false  # Set to true if this is a prerelease, false for regular releases
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # This is automatically available for GitHub Actions workflows
