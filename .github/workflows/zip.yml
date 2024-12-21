@@ -10,15 +10,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Pull the latest changes with a shallow clone to avoid fetching large files (e.g., .zip)
-    - name: Pull latest changes
+    # Pull the latest changes (shallow fetch without the zip files)
+    - name: Pull latest changes with shallow clone to avoid fetching large files
       run: |
         git config --global user.name "mr1326"
         git config --global user.email ""
         git config pull.rebase false
         git pull --depth 1  # Shallow pull to avoid fetching the entire history
 
-    # Remove the old zip file from the main repo if it exists (automated cleanup)
+    # Remove any old .zip files from the main repo (automated cleanup)
     - name: Remove old resource pack zip from main repo
       run: |
         rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
@@ -38,14 +38,14 @@ jobs:
         echo "VERSION=$version" >> $GITHUB_ENV
         echo "Extracted version: $version"
 
-    # Archive the release, including only the necessary resource pack files
-    - name: Archive Resource Pack Release in main repo
+    # Archive the release in the main repo, but don't push the .zip file yet
+    - name: Archive Resource Pack Release in main repo (without pushing the .zip)
       uses: thedoctor0/zip-release@master
       with:
         filename: "resourcepack-${{ env.VERSION }}.zip"  # Append version to the filename
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
 
-    # Push the .zip file to the main repository (only the latest version)
+    # Push the new version of the resource pack to the main repository (latest version only)
     - name: Push latest version to main repository
       run: |
         git config --global user.name "github-actions[bot]"
@@ -56,15 +56,19 @@ jobs:
         git push --force  # Push only the latest version to the main repository
 
     # Push the .zip file to the Archive repository (all versions)
-    - name: Push .zip file to Archive repository
+    - name: Push .zip file to Archive repository (without pulling the main repo's zip)
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git remote add archive https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git
-        git clone https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git  # Clone the Archive repo
+        
+        # Clone only the archive repository to avoid pulling the main repo's .zip files
+        git clone https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git SkyMineRP-Archiv
+
+        # Navigate to the archive repository
+        cd SkyMineRP-Archiv
 
         # Add the new zip file to the Archive repo
-        cd SkyMineRP-Archiv
-        git add SkymineRP-${{ env.VERSION }}.zip  # Add new version to the archive
-        git commit -m "Add new resource pack version ${{ env.VERSION }}"
-        git push archive main  # Push to the archive repo
+        cp ../resourcepack-${{ env.VERSION }}.zip .  # Copy new version zip from main repo to archive repo
+        git add SkymineRP-${{ env.VERSION }}.zip  # Add the new version zip file
+        git commit -m "Add new resource pack version ${{ env.VERSION }} to archive"
+        git push origin main  # Push the updated archive with all versions
