@@ -1,5 +1,8 @@
 name: Resource Pack
-on: [push]
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger the workflow on tags that start with "v"
 
 jobs:
   build:
@@ -9,12 +12,6 @@ jobs:
     # Checkout the code from the repository
     - name: Checkout code from main repo
       uses: actions/checkout@v2
-
-    # Remove old zip file from main repo if it exists (automated cleanup)
-    - name: Remove old resource pack zip from main repo
-      run: |
-        rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
-        echo "Old .zip files removed from main repository"
 
     # Extract the version number from your resource pack file (or another file where it's stored)
     - name: Extract version from resource pack description
@@ -30,27 +27,17 @@ jobs:
         echo "VERSION=$version" >> $GITHUB_ENV
         echo "Extracted version: $version"
 
-    # Archive the release in the main repo
-    - name: Archive Resource Pack Release in main repo
+    # Archive the release (we won't push the .zip file to the repository)
+    - name: Archive Resource Pack Release (no push to repo)
       uses: thedoctor0/zip-release@master
       with:
         filename: "SkyMineRP-${{ env.VERSION }}.zip"  # Append version to the filename
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
 
-    # Push the .zip file to the main repository (only the latest version)
-    - name: Push latest version to main repository
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMinePack.git
-        git add -A
-        git commit -m "new resource pack version ${{ env.VERSION }}"
-        git push --force  # Push only the latest version to the main repository
-
-    # Create GitHub Release and upload the .zip file as an asset
+    # Create GitHub Release and Upload ZIP File (no need to store in main repo)
     - name: Create GitHub Release and Upload ZIP File
       uses: softprops/action-gh-release@v1
       with:
-        files: resourcepack-${{ env.VERSION }}.zip  # Attach the .zip file to the release
+        files: SkyMineRP-${{ env.VERSION }}.zip  # Attach the .zip file to the release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # This is automatically available for GitHub Actions workflows
