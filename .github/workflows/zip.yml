@@ -7,7 +7,7 @@ jobs:
     steps:
 
     # Checkout the code from the repository
-    - name: Checkout code
+    - name: Checkout code from main repo
       uses: actions/checkout@v2
 
     # Remove old zip file from main repo if it exists (automated cleanup)
@@ -31,31 +31,13 @@ jobs:
         echo "Extracted version: $version"
 
     # Archive the release in the main repo, but don't push the .zip file yet
-    - name: Archive Resource Pack Release in main repo (without pushing the .zip)
+    - name: Archive Resource Pack Release in main repo
       uses: thedoctor0/zip-release@master
       with:
         filename: "resourcepack-${{ env.VERSION }}.zip"  # Append version to the filename
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
 
-    # Push the .zip file to the Archive repository (all versions)
-    - name: Push .zip file to Archive repository (without pulling the main repo's zip)
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        
-        # Clone the Archive repo, NOT the main repo
-        git clone --depth 1 https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMineRP-Archiv.git SkyMineRP-Archiv
-
-        # Navigate to the archive repository
-        cd SkyMineRP-Archiv
-
-        # Add the new zip file to the Archive repo
-        cp ../resourcepack-${{ env.VERSION }}.zip .  # Copy new version zip from main repo to archive repo
-        git add SkymineRP-${{ env.VERSION }}.zip  # Add the new version zip file
-        git commit -m "Add new resource pack version ${{ env.VERSION }} to archive"
-        git push origin main  # Push the updated archive with all versions
-
-    # Push the latest version of the resource pack to the main repository
+    # Push the .zip file to the main repository (only the latest version)
     - name: Push latest version to main repository
       run: |
         git config --global user.name "github-actions[bot]"
