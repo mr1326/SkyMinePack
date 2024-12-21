@@ -16,7 +16,7 @@ jobs:
         rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
         echo "Old .zip files removed from main repository"
 
-    # Extract the version number from your resource pack file (or another file where it's stored)
+    # Extract the version number from your resource pack file (or another file where version is stored)
     - name: Extract version from resource pack description
       id: version
       run: |
@@ -30,24 +30,7 @@ jobs:
         echo "VERSION=$version" >> $GITHUB_ENV
         echo "Extracted version: $version"
 
-    # Archive the release in the main repo
-    - name: Archive Resource Pack Release in main repo
-      uses: thedoctor0/zip-release@master
-      with:
-        filename: "SkyMineRP-${{ env.VERSION }}.zip"  # Append version to the filename
-        exclusions: '*.git* /*node_modules/* .editorconfig'  # Exclude unnecessary files
-
-    # Push the .zip file to the main repository (only the latest version)
-    - name: Push latest version to main repository
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/mr1326/SkyMinePack.git
-        git add -A
-        git commit -m "new resource pack version ${{ env.VERSION }}"
-        git push --force  # Push only the latest version to the main repository
-
-    # Create and push Git tag (IMPORTANT! This is the missing part that was causing the error)
+    # Create Git tag (IMPORTANT! This is the missing part that was causing the error)
     - name: Create and Push Git Tag
       run: |
         git tag v${{ env.VERSION }}  # Create a tag with version number (e.g., v6.1.0)
