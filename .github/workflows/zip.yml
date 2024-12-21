@@ -47,10 +47,10 @@ jobs:
         git commit -m "new resource pack version ${{ env.VERSION }}"
         git push --force  # Push only the latest version to the main repository
 
-    # Create a new Git tag based on the version and push it
+    # Create and push Git tag (IMPORTANT! This is the missing part that was causing the error)
     - name: Create and Push Git Tag
       run: |
-        git tag v${{ env.VERSION }}  # Create a tag using the extracted version
+        git tag v${{ env.VERSION }}  # Create a tag with version number (e.g., v6.1.0)
         git push origin v${{ env.VERSION }}  # Push the tag to GitHub
 
     # Create GitHub Release and Upload ZIP File
