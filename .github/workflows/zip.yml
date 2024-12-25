@@ -49,8 +49,13 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git tag v${{ env.VERSION }}  # Create a new tag (e.g., v6.5.0)
         git push origin v${{ env.VERSION }}  # Push the tag to GitHub
+        echo "Git tag v${{ env.VERSION }} created and pushed."
 
-    # Create GitHub Release and upload ZIP file
+    # Wait for the tag to be available
+    - name: Wait for Git tag
+      run: sleep 10  # Wait for 10 seconds to ensure the tag is available on GitHub
+
+    # Create GitHub release and upload ZIP file
     - name: Create GitHub release and upload ZIP
       uses: softprops/action-gh-release@v1
       with:
