@@ -7,43 +7,49 @@ jobs:
     steps:
 
     # Checkout the code from the repository
-    - name: Checkout code from main repo
+    - name: Checkout code from main repository
       uses: actions/checkout@v2
 
-    # Remove old zip file from main repo if it exists (automated cleanup)
-    - name: Remove old resource pack zip from main repo
+    # Remove old resource pack zip files (cleanup)
+    - name: Remove old resource pack zip
       run: |
-        rm -f resourcepack-*.zip  # Remove any previous version of the resource pack zip
-        echo "Old .zip files removed from main repository"
+        rm -f SkyMineRP-*.zip  # Remove any previous resource pack zips
+        echo "Old resource pack zip files removed."
 
-    # Extract the version number from your resource pack file (or another file where version is stored)
-    - name: Extract version from resource pack description
+    # Extract the version number from pack.mcmeta
+    - name: Extract version from pack.mcmeta
       id: version
       run: |
-        # Read the description from the resource pack file (or a specific file where version is stored)
+        # Read the version from pack.mcmeta
         description=$(cat pack.mcmeta)
-        
-        # Use regex to extract the version number (e.g., 'V 6.0.1')
+
+        # Use regex to extract the version number (e.g., 'V 6.0.1' -> 6.0.1)
         version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
-        
-        # Set the extracted version to an environment variable for later steps
+
+        # Validate version extraction
+        if [ -z "$version" ]; then
+          echo "Error: Version could not be extracted from pack.mcmeta."
+          exit 1
+        fi
+
+        # Save the version for use in later steps
         echo "VERSION=$version" >> $GITHUB_ENV
         echo "Extracted version: $version"
 
-    # Create Git tag (IMPORTANT! This is the missing part that was causing the error)
-    - name: Create and Push Git Tag
+    # Create the resource pack zip file with assets in the root
+    - name: Create resource pack zip
       run: |
-        git tag v${{ env.VERSION }}  # Create a tag with version number (e.g., v6.1.0)
-        git push origin v${{ env.VERSION }}  # Push the tag to GitHub
+        zip -r SkyMineRP-latest.zip . -x ".git/*" "node_modules/*" "*.editorconfig"
+        echo "Resource pack zip created: SkyMineRP-latest.zip"
 
-    # Create GitHub Release and Upload ZIP File
-    - name: Create GitHub Release and Upload ZIP File
+    # Create GitHub Release and upload ZIP file
+    - name: Create GitHub release and upload ZIP
       uses: softprops/action-gh-release@v1
       with:
-        files: SkyMineRP-${{ env.VERSION }}.zip  # Attach the .zip file to the release
-        name: "SkyMineRP-${{ env.VERSION }}"  # Set release name to SkyMineRP-version
-        body: " "  # Empty description (just a space to fulfill the requirement)
-        draft: false  # Set to false to make the release publicly available
-        prerelease: false  # Set to true if this is a prerelease, false for regular releases
+        files: SkyMineRP-latest.zip  # Upload the ZIP as the release asset
+        name: "SkyMineRP v${{ env.VERSION }}"  # Name the release
+        body: "New resource pack version v${{ env.VERSION }}"  # Description for the release
+        draft: false  # Make the release publicly available
+        prerelease: false  # Mark as stable release
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # This is automatically available for GitHub Actions workflows
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required for authentication
