@@ -43,7 +43,7 @@ jobs:
         filename: 'release-v${{ steps.extract_version.outputs.version }}.zip'  # Creating a versioned ZIP file
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Excluding unwanted files/folders
 
-    - name: Create GitHub Release using Octokit
+    - name: Create GitHub Release using Octokit (Fixed curl command)
       id: create_release
       run: |
         VERSION=${{ steps.extract_version.outputs.version }}
@@ -54,13 +54,13 @@ jobs:
         # Create a GitHub release using the Octokit REST API
         curl -X POST \
           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          -d '{
-                "tag_name": "'$TAG_NAME'",
-                "release_name": "'$RELEASE_NAME'",
-                "body": "'$BODY'",
-                "draft": false,
-                "prerelease": false
-              }' \
+          -d "{
+                \"tag_name\": \"$TAG_NAME\",
+                \"release_name\": \"$RELEASE_NAME\",
+                \"body\": \"$BODY\",
+                \"draft\": false,
+                \"prerelease\": false
+              }" \
           https://api.github.com/repos/${{ github.repository }}/releases
 
     - name: Upload ZIP to GitHub Release
