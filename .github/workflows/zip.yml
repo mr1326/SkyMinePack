@@ -1,68 +1,62 @@
-name: Resource Pack
-on: [push]
+name: Create Release with Version Tag
+
+on:
+  push:
+    branches:
+      - main  # Trigger the workflow on pushes to the `main` branch.
 
 jobs:
-  build:
+  create-release:
     runs-on: ubuntu-latest
-    steps:
 
-    # Checkout the code from the repository
-    - name: Checkout code from main repository
+    steps:
+    - name: Checkout Code
       uses: actions/checkout@v2
 
-    # Remove old resource pack zip files (cleanup)
-    - name: Remove old resource pack zip
+    - name: Extract Version from pack.mcmeta
+      id: extract_version
       run: |
-        rm -f SkyMineRP-*.zip  # Remove any previous resource pack zips
-        echo "Old resource pack zip files removed."
-
-    # Extract the version number from pack.mcmeta
-    - name: Extract version from pack.mcmeta
-      id: version
-      run: |
-        # Read the version from pack.mcmeta
         description=$(cat pack.mcmeta)
-
-        # Use regex to extract the version number (e.g., 'V 6.0.1' -> 6.0.1)
         version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
 
-        # Validate version extraction
         if [ -z "$version" ]; then
           echo "Error: Version could not be extracted from pack.mcmeta."
           exit 1
         fi
 
-        # Save the version for use in later steps
         echo "VERSION=$version" >> $GITHUB_ENV
-        echo "Extracted version: $version"
+        echo "::set-output name=version::$version"
 
-    # Create the resource pack zip file with assets in the root
-    - name: Create resource pack zip
+    - name: Set Up Git
       run: |
-        zip -r SkyMineRP-latest.zip . -x ".git/*" "node_modules/*" "*.editorconfig"
-        echo "Resource pack zip created: SkyMineRP-latest.zip"
+        git config --global user.name "your-username"
+        git config --global user.email "your-email@example.com"
 
-    # Create and push a Git tag for the version
-    - name: Create and push Git tag
+    - name: Create and Push Git Tag
       run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git tag v${{ env.VERSION }}  # Create a new tag (e.g., v6.5.0)
-        git push origin v${{ env.VERSION }}  # Push the tag to GitHub
-        echo "Git tag v${{ env.VERSION }} created and pushed."
+        git tag v${{ steps.extract_version.outputs.version }}
+        git push origin v${{ steps.extract_version.outputs.version }}
 
-    # Wait for the tag to be available
-    - name: Wait for Git tag
-      run: sleep 10  # Wait for 10 seconds to ensure the tag is available on GitHub
-
-    # Create GitHub release and upload ZIP file
-    - name: Create GitHub release and upload ZIP
-      uses: softprops/action-gh-release@v1
+    - name: Archive Release with Exclusions
+      uses: thedoctor0/zip-release@master
       with:
-        files: SkyMineRP-latest.zip  # Upload the ZIP as the release asset
-        name: "SkyMineRP v${{ env.VERSION }}"  # Name the release
-        body: "New resource pack version v${{ env.VERSION }}"  # Description for the release
-        draft: false  # Make the release publicly available
-        prerelease: false  # Mark as stable release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required for authentication
+        filename: 'release-v${{ steps.extract_version.outputs.version }}.zip'  # Creating a versioned ZIP file
+        exclusions: '*.git* /*node_modules/* .editorconfig'  # Excluding unwanted files/folders
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}  # Add the token for authentication
+        tag_name: v${{ steps.extract_version.outputs.version }}
+        release_name: "Release v${{ steps.extract_version.outputs.version }}"
+        body: "Automated release for version v${{ steps.extract_version.outputs.version }}"
+        draft: false
+        prerelease: false
+
+    - name: Upload ZIP to GitHub Release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: release-v${{ steps.extract_version.outputs.version }}.zip
+        asset_name: release-v${{ steps.extract_version.outputs.version }}.zip
+        asset_content_type: application/zip
