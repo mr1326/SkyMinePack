@@ -44,9 +44,9 @@ jobs:
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Excluding unwanted files/folders
 
     - name: Create GitHub Release
-      uses: actions/create-release@v1
+      uses: actions/create-release@v1.0.0  # Update to a newer version
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}  # Add the token for authentication
+        token: ${{ secrets.GITHUB_TOKEN }}  # Ensure GITHUB_TOKEN is being used
         tag_name: v${{ steps.extract_version.outputs.version }}
         release_name: "Release v${{ steps.extract_version.outputs.version }}"
         body: "Automated release for version v${{ steps.extract_version.outputs.version }}"
