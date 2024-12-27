@@ -29,8 +29,8 @@ jobs:
 
     - name: Set Up Git
       run: |
-        git config --global user.name "mr1326"
-        git config --global user.email "mr1326@email.cz"
+        git config --global user.name "your-username"
+        git config --global user.email "your-email@example.com"
 
     - name: Create and Push Git Tag
       run: |
@@ -43,20 +43,30 @@ jobs:
         filename: 'release-v${{ steps.extract_version.outputs.version }}.zip'  # Creating a versioned ZIP file
         exclusions: '*.git* /*node_modules/* .editorconfig'  # Excluding unwanted files/folders
 
-    - name: Create GitHub Release
-      uses: actions/create-release@v1.0.0  # Update to a newer version
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}  # Ensure GITHUB_TOKEN is being used
-        tag_name: v${{ steps.extract_version.outputs.version }}
-        release_name: "Release v${{ steps.extract_version.outputs.version }}"
-        body: "Automated release for version v${{ steps.extract_version.outputs.version }}"
-        draft: false
-        prerelease: false
+    - name: Create GitHub Release using Octokit
+      id: create_release
+      run: |
+        VERSION=${{ steps.extract_version.outputs.version }}
+        TAG_NAME="v$VERSION"
+        RELEASE_NAME="Release v$VERSION"
+        BODY="Automated release for version v$VERSION"
+
+        # Create a GitHub release using the Octokit REST API
+        curl -X POST \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -d '{
+                "tag_name": "'$TAG_NAME'",
+                "release_name": "'$RELEASE_NAME'",
+                "body": "'$BODY'",
+                "draft": false,
+                "prerelease": false
+              }' \
+          https://api.github.com/repos/${{ github.repository }}/releases
 
     - name: Upload ZIP to GitHub Release
       uses: actions/upload-release-asset@v1
       with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: release-v${{ steps.extract_version.outputs.version }}.zip
         asset_name: release-v${{ steps.extract_version.outputs.version }}.zip
         asset_content_type: application/zip
