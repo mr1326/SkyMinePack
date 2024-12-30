@@ -28,16 +28,13 @@ jobs:
     - name: Archive Release with Exclusions
       uses: thedoctor0/zip-release@master
       with:
-        filename: 'temp.zip'  # Temporary file name for the ZIP
+        filename: 'SkyMinePack.zip'  # New file name for the ZIP
         exclusions: '*.git* /*node_modules/* .editorconfig'
-
-    - name: Rename ZIP to latest.zip
-      run: mv temp.zip latest.zip
 
     - name: Generate SHA-1 Hash for the ZIP
       id: generate_sha1
       run: |
-        SHA1=$(sha1sum latest.zip | awk '{print $1}')
+        SHA1=$(sha1sum SkyMinePack.zip | awk '{print $1}')
         echo "SHA1=$SHA1" >> $GITHUB_ENV
         echo "::set-output name=sha1::$SHA1"
 
@@ -64,10 +61,10 @@ jobs:
         upload_url=$(echo "$response" | jq -r '.upload_url' | sed 's/{?name,label}//')
         echo "::set-output name=upload_url::$upload_url"
 
-    - name: Upload latest.zip to GitHub Release
+    - name: Upload SkyMinePack.zip to GitHub Release
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: latest.zip  # Ensures static file name
-        asset_name: latest.zip  # Static name for the asset
+        asset_path: SkyMinePack.zip  # Updated file path
+        asset_name: SkyMinePack.zip  # Updated file name
         asset_content_type: application/zip
