@@ -62,7 +62,7 @@ jobs:
         echo "::set-output name=upload_url::$upload_url"
 
     - name: Upload SkyMinePack.zip to GitHub Release
-      uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@v1.0.1  # Update to a newer version of the action
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: SkyMinePack.zip  # Static file name for the asset
