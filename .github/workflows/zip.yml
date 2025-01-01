@@ -13,11 +13,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Extract version from description
+    - name: Extract version from pack.mcmeta
       id: extract_version
       run: |
-        if [[ -f description.txt ]]; then
-          description=$(cat description.txt)
+        if [[ -f pack.mcmeta ]]; then
+          description=$(cat pack.mcmeta)
           
           # Remove color codes (unicode like \u00a76, \u00a74)
           cleaned_description=$(echo "$description" | sed 's/\\u[0-9A-Fa-f]\{4\}//g')
