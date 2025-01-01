@@ -33,8 +33,13 @@ jobs:
 
     - name: Archive Assets Directly into ZIP
       run: |
-        zip -r "SkyMinePack-$VERSION.zip" * \
-        --exclude '*.git*' '*/node_modules/*' '.editorconfig'
+        # Ensure that only the files are added to the ZIP, not the containing folder
+        mkdir temp_assets
+        cp -r !(temp_assets|.git|node_modules|.editorconfig) temp_assets/
+        cd temp_assets
+        zip -r ../SkyMinePack-$VERSION.zip ./*
+        cd ..
+        rm -rf temp_assets
 
     - name: Generate SHA-1 Hash for the ZIP
       id: generate_sha1
