@@ -1,71 +1,40 @@
-name: Create Release with Static ZIP and Versioned Name
+name: Create and Upload Release ZIP
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*' # Trigger workflow when a tag is pushed
 
 jobs:
-  create-release:
+  create-zip-and-release:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    - name: Extract Version from pack.mcmeta
-      id: extract_version
+    - name: Create ZIP file
       run: |
-        description=$(cat pack.mcmeta)
-        version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
-        if [ -z "$version" ]; then
-          echo "Error: Version could not be extracted from pack.mcmeta."
-          exit 1
-        fi
-        echo "VERSION=$version" >> $GITHUB_ENV
-        echo "::set-output name=version::$version"
+        # Exclude GitHub-specific files and directories
+        zip -r release.zip . -x '*.git*' '*.github*'
 
-    - name: Archive Assets Directly into ZIP
-      run: |
-        # Ensure the zip file contains the files directly, not the folder
-        zip -r SkyMinePack.zip * \
-        --exclude '*.git*' '*/node_modules/*' '.editorconfig'
-      shell: bash
-
-    - name: Generate SHA-1 Hash for the ZIP
-      id: generate_sha1
-      run: |
-        SHA1=$(sha1sum SkyMinePack.zip | awk '{print $1}')
-        echo "SHA1=$SHA1" >> $GITHUB_ENV
-        echo "::set-output name=sha1::$SHA1"
-
-    - name: Create GitHub Release
+    - name: Create a Release
       id: create_release
-      run: |
-        VERSION=${{ steps.extract_version.outputs.version }}
-        SHA1=${{ steps.generate_sha1.outputs.sha1 }}
-        RELEASE_NAME="v$VERSION"  # Release name contains the version
-        BODY="Automated release for version v$VERSION\n\nSHA-1 Hash:\n$SHA1"
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }} # Use the tag name as release name
+        release_name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
 
-        # Create a GitHub release
-        response=$(curl -X POST \
-          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          -d "{
-                \"tag_name\": \"v$VERSION\",
-                \"release_name\": \"$RELEASE_NAME\",
-                \"body\": \"$BODY\",
-                \"draft\": false,
-                \"prerelease\": false
-              }" \
-          https://api.github.com/repos/${{ github.repository }}/releases)
-
-        upload_url=$(echo "$response" | jq -r '.upload_url' | sed 's/{?name,label}//')
-        echo "::set-output name=upload_url::$upload_url"
-
-    - name: Upload SkyMinePack.zip to GitHub Release
-      uses: actions/upload-release-asset@v1.0.1
+    - name: Upload ZIP to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: SkyMinePack.zip  # Static file name for the asset
-        asset_name: SkyMinePack.zip  # Static file name for the asset
+        asset_path: ./release.zip
+        asset_name: release-${{ github.ref_name }}.zip
         asset_content_type: application/zip
