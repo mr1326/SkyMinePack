@@ -22,7 +22,7 @@ jobs:
           # Remove color codes (unicode like \u00a76, \u00a74)
           cleaned_description=$(echo "$description" | sed 's/\\u[0-9A-Fa-f]\{4\}//g')
 
-          # Extract version number (in the format V x.x.x)
+          # Extract version number (in the format x.x.x)
           version=$(echo "$cleaned_description" | grep -oP '\d+\.\d+\.\d+')
 
           if [[ -z "$version" ]]; then
@@ -30,20 +30,20 @@ jobs:
             version="unknown-version"
           fi
         else
-          echo "description.txt not found! Defaulting to unknown-version."
+          echo "pack.mcmeta not found! Defaulting to unknown-version."
           version="unknown-version"
         fi
         echo "Extracted version: $version"
-        echo "version=$version" >> $GITHUB_ENV
+        echo "version=$version" >> $GITHUB_ENV  # This will set 'version' as an environment variable
 
     - name: Debug version
       run: |
-        echo "Version is: ${{ env.version }}"
+        echo "Version is: ${{ env.version }}"  # Ensure the 'version' environment variable is available
 
     - name: Set Git identity
       run: |
-        git config --global user.email "mr1326@email.cz"
-        git config --global user.name "mr1326"
+        git config --global user.email "${{ secrets.GIT_EMAIL }}"
+        git config --global user.name "${{ secrets.GIT_USERNAME }}"
 
     - name: Create Tag
       run: |
@@ -69,7 +69,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ env.version }} # Use the tag created earlier as release reference
+        tag_name: v${{ env.version }}  # Use the version extracted earlier as the tag name
         release_name: Release ${{ env.version }}
         draft: false
         prerelease: false
