@@ -38,8 +38,11 @@ jobs:
 
     - name: Set Git identity
       run: |
-        git config --global user.email "${{ secrets.GIT_EMAIL }}"
-        git config --global user.name "${{ secrets.GIT_USERNAME }}"
+        # Use the GitHub actor (username) for the Git identity
+        git config --global user.name "${{ github.actor }}"
+        
+        # Use the email associated with the GitHub actor
+        git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
     - name: Create Tag
       run: |
