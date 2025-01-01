@@ -18,7 +18,13 @@ jobs:
       run: |
         if [[ -f description.txt ]]; then
           description=$(cat description.txt)
-          version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
+          
+          # Remove color codes (unicode like \u00a76, \u00a74)
+          cleaned_description=$(echo "$description" | sed 's/\\u[0-9A-Fa-f]\{4\}//g')
+
+          # Extract version number (in the format V x.x.x)
+          version=$(echo "$cleaned_description" | grep -oP '\d+\.\d+\.\d+')
+
           if [[ -z "$version" ]]; then
             echo "Version extraction failed! Defaulting to unknown-version."
             version="unknown-version"
@@ -36,8 +42,6 @@ jobs:
 
     - name: Set Git identity
       run: |
-        git config --global user.email "mr1326@email.cz"
-        git config --global user.name "mr1326"
 
     - name: Create Tag
       run: |
