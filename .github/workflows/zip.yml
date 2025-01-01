@@ -73,8 +73,8 @@ jobs:
         draft: false
         prerelease: false
         body: |
-          Release version: ${{ env.VERSION }}
-          SHA1 hash of ZIP: ${{ env.sha1 }}
+          Release v${{ env.VERSION }}
+          SHA1: ${{ env.sha1 }}
 
     - name: Upload ZIP to Release
       uses: actions/upload-release-asset@v1
