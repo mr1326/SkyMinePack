@@ -13,10 +13,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Extract version from description
+      id: extract_version
+      run: |
+        description=$(cat description.txt) # Replace with the correct file if needed
+        version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
+        echo "version=$version" >> $GITHUB_ENV
+
     - name: Create ZIP file
       run: |
         # Exclude GitHub-specific files and directories
-        zip -r release.zip . -x '*.git*' '*.github*'
+        zip -r release-$version.zip . -x '*.git*' '*.github*'
 
     - name: Create a Release
       id: create_release
@@ -25,7 +32,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref_name }} # Use the tag name as release name
-        release_name: Release ${{ github.ref_name }}
+        release_name: Release ${{ env.version }}
         draft: false
         prerelease: false
 
@@ -35,6 +42,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release.zip
-        asset_name: release-${{ github.ref_name }}.zip
+        asset_path: ./release-${{ env.version }}.zip
+        asset_name: release-${{ env.version }}.zip
         asset_content_type: application/zip
