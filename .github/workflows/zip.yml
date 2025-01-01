@@ -13,22 +13,26 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Extract version from description
+    - name: Extract version
       id: extract_version
       run: |
-        if [[ -f description.txt ]]; then
-          description=$(cat description.txt)
-          version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
+        if [[ -f pack.mcmeta ]]; then
+          version=$(cat pack.mcmeta)
+          version=$(echo "$version" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
           if [[ -z "$version" ]]; then
             echo "Version extraction failed! Defaulting to unknown-version."
             version="unknown-version"
           fi
         else
-          echo "description.txt not found! Defaulting to unknown-version."
+          echo "pack.mcmeta not found! Defaulting to unknown-version."
           version="unknown-version"
         fi
         echo "Extracted version: $version"
         echo "version=$version" >> $GITHUB_ENV
+
+    - name: Debug version
+      run: |
+        echo "Version is: ${{ env.version }}"
 
     - name: Create ZIP file
       run: |
