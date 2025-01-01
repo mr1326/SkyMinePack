@@ -2,8 +2,8 @@ name: Create and Upload Release ZIP
 
 on:
   push:
-    tags:
-      - '*' # Trigger workflow when a tag is pushed
+    branches:
+      - main  # Trigger workflow when a commit is pushed to the main branch
 
 jobs:
   create-zip-and-release:
@@ -13,18 +13,18 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Extract version
+    - name: Extract version from description
       id: extract_version
       run: |
-        if [[ -f pack.mcmeta ]]; then
-          version=$(cat pack.mcmeta)
-          version=$(echo "$version" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
+        if [[ -f description.txt ]]; then
+          description=$(cat description.txt)
+          version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
           if [[ -z "$version" ]]; then
             echo "Version extraction failed! Defaulting to unknown-version."
             version="unknown-version"
           fi
         else
-          echo "pack.mcmeta not found! Defaulting to unknown-version."
+          echo "description.txt not found! Defaulting to unknown-version."
           version="unknown-version"
         fi
         echo "Extracted version: $version"
@@ -34,10 +34,23 @@ jobs:
       run: |
         echo "Version is: ${{ env.version }}"
 
+    - name: Create Tag
+      run: |
+        git tag -a "v${{ env.version }}" -m "Release v${{ env.version }}"
+        git push origin "v${{ env.version }}"
+
     - name: Create ZIP file
       run: |
         # Exclude GitHub-specific files and directories
         zip -r release-${{ env.version }}.zip . -x '*.git*' '*.github*'
+
+    - name: Calculate SHA1 hash of ZIP file
+      id: calculate_sha1
+      run: |
+        sha1sum release-${{ env.version }}.zip | awk '{print $1}' > sha1.txt
+        sha1=$(cat sha1.txt)
+        echo "SHA1 hash: $sha1"
+        echo "sha1=$sha1" >> $GITHUB_ENV
 
     - name: Create a Release
       id: create_release
@@ -45,10 +58,13 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref_name }} # Use the tag name as release reference
+        tag_name: v${{ env.version }} # Use the tag created earlier as release reference
         release_name: Release ${{ env.version }}
         draft: false
         prerelease: false
+        body: |
+          Release version: ${{ env.version }}
+          SHA1 hash of ZIP: ${{ env.sha1 }}
 
     - name: Upload ZIP to Release
       uses: actions/upload-release-asset@v1
