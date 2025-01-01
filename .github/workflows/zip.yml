@@ -13,46 +13,41 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v2
 
-    - name: Install jq
-      run: sudo apt-get install -y jq
-
     - name: Extract Version from pack.mcmeta
       id: extract_version
       run: |
-        if [ ! -f pack.mcmeta ]; then
-          echo "Error: pack.mcmeta file not found."
-          exit 1
-        fi
         description=$(cat pack.mcmeta)
-        version=$(echo "$description" | grep -oP 'V ?\d+\.\d+\.\d+' | awk '{print $NF}')
+        version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
         if [ -z "$version" ]; then
           echo "Error: Version could not be extracted from pack.mcmeta."
           exit 1
         fi
         echo "VERSION=$version" >> $GITHUB_ENV
+        echo "::set-output name=version::$version"
 
     - name: Archive Assets Directly into ZIP
       run: |
-        # Ensure that only the files are added to the ZIP, not the containing folder
-        mkdir temp_assets
-        cp -r !(temp_assets|.git|node_modules|.editorconfig) temp_assets/
-        cd temp_assets
-        zip -r ../SkyMinePack-$VERSION.zip ./*
-        cd ..
-        rm -rf temp_assets
+        # Ensure the zip file contains the files directly, not the folder
+        zip -r SkyMinePack.zip * \
+        --exclude '*.git*' '*/node_modules/*' '.editorconfig'
+      shell: bash
 
     - name: Generate SHA-1 Hash for the ZIP
       id: generate_sha1
       run: |
-        SHA1=$(sha1sum "SkyMinePack-$VERSION.zip" | awk '{print $1}')
+        SHA1=$(sha1sum SkyMinePack.zip | awk '{print $1}')
         echo "SHA1=$SHA1" >> $GITHUB_ENV
+        echo "::set-output name=sha1::$SHA1"
 
     - name: Create GitHub Release
       id: create_release
       run: |
-        RELEASE_NAME="v$VERSION"
+        VERSION=${{ steps.extract_version.outputs.version }}
+        SHA1=${{ steps.generate_sha1.outputs.sha1 }}
+        RELEASE_NAME="v$VERSION"  # Release name contains the version
         BODY="Automated release for version v$VERSION\n\nSHA-1 Hash:\n$SHA1"
 
+        # Create a GitHub release
         response=$(curl -X POST \
           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -d "{
@@ -64,19 +59,13 @@ jobs:
               }" \
           https://api.github.com/repos/${{ github.repository }}/releases)
 
-        if [ "$(echo "$response" | jq -r '.id')" == "null" ]; then
-          echo "Error: Failed to create GitHub release."
-          echo "$response"
-          exit 1
-        fi
-
         upload_url=$(echo "$response" | jq -r '.upload_url' | sed 's/{?name,label}//')
-        echo "UPLOAD_URL=$upload_url" >> $GITHUB_ENV
+        echo "::set-output name=upload_url::$upload_url"
 
-    - name: Upload SkyMinePack ZIP to GitHub Release
+    - name: Upload SkyMinePack.zip to GitHub Release
       uses: actions/upload-release-asset@v1.0.1
       with:
-        upload_url: ${{ env.UPLOAD_URL }}
-        asset_path: "SkyMinePack-$VERSION.zip"
-        asset_name: "SkyMinePack-$VERSION.zip"
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: SkyMinePack.zip  # Static file name for the asset
+        asset_name: SkyMinePack.zip  # Static file name for the asset
         asset_content_type: application/zip
