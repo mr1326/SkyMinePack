@@ -16,29 +16,25 @@ jobs:
     - name: Extract version from pack.mcmeta
       id: extract_version
       run: |
-        if [[ -f pack.mcmeta ]]; then
-          description=$(cat pack.mcmeta)
-          
-          # Remove color codes (unicode like \u00a76, \u00a74)
-          cleaned_description=$(echo "$description" | sed 's/\\u[0-9A-Fa-f]\{4\}//g')
-
-          # Extract version number (in the format x.x.x)
-          version=$(echo "$cleaned_description" | grep -oP '\d+\.\d+\.\d+')
-
-          if [[ -z "$version" ]]; then
-            echo "Version extraction failed! Defaulting to unknown-version."
-            version="unknown-version"
-          fi
-        else
-          echo "pack.mcmeta not found! Defaulting to unknown-version."
-          version="unknown-version"
+        # Read the version from pack.mcmeta
+        description=$(cat pack.mcmeta)
+        
+        # Use regex to extract the version number (e.g., 'V 6.0.1' -> 6.0.1)
+        version=$(echo "$description" | grep -oP 'V \d+\.\d+\.\d+' | awk '{print $2}')
+        
+        # Validate version extraction
+        if [ -z "$version" ]; then
+          echo "Error: Version could not be extracted from pack.mcmeta."
+          exit 1
         fi
+        
+        # Save the version for use in later steps
+        echo "VERSION=$version" >> $GITHUB_ENV
         echo "Extracted version: $version"
-        echo "version=$version" >> $GITHUB_ENV  # This will set 'version' as an environment variable
 
     - name: Debug version
       run: |
-        echo "Version is: ${{ env.version }}"  # Ensure the 'version' environment variable is available
+        echo "Version is: ${{ env.VERSION }}"  # Ensure the 'VERSION' environment variable is available
 
     - name: Set Git identity
       run: |
@@ -47,18 +43,18 @@ jobs:
 
     - name: Create Tag
       run: |
-        git tag -a "v${{ env.version }}" -m "Release v${{ env.version }}"
-        git push origin "v${{ env.version }}"
+        git tag -a "v${{ env.VERSION }}" -m "Release v${{ env.VERSION }}"
+        git push origin "v${{ env.VERSION }}"
 
     - name: Create ZIP file
       run: |
         # Exclude GitHub-specific files and directories
-        zip -r release-${{ env.version }}.zip . -x '*.git*' '*.github*'
+        zip -r release-${{ env.VERSION }}.zip . -x '*.git*' '*.github*'
 
     - name: Calculate SHA1 hash of ZIP file
       id: calculate_sha1
       run: |
-        sha1sum release-${{ env.version }}.zip | awk '{print $1}' > sha1.txt
+        sha1sum release-${{ env.VERSION }}.zip | awk '{print $1}' > sha1.txt
         sha1=$(cat sha1.txt)
         echo "SHA1 hash: $sha1"
         echo "sha1=$sha1" >> $GITHUB_ENV
@@ -69,12 +65,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ env.version }}  # Use the version extracted earlier as the tag name
-        release_name: Release ${{ env.version }}
+        tag_name: v${{ env.VERSION }}  # Use the version extracted earlier as the tag name
+        release_name: Release ${{ env.VERSION }}
         draft: false
         prerelease: false
         body: |
-          Release version: ${{ env.version }}
+          Release version: ${{ env.VERSION }}
           SHA1 hash of ZIP: ${{ env.sha1 }}
 
     - name: Upload ZIP to Release
@@ -83,6 +79,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release-${{ env.version }}.zip
-        asset_name: release-${{ env.version }}.zip
+        asset_path: ./release-${{ env.VERSION }}.zip
+        asset_name: release-${{ env.VERSION }}.zip
         asset_content_type: application/zip
